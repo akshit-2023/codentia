@@ -1,8 +1,8 @@
 import { db } from "../libs/db.js";
 import { getJudge0LanguageId } from "../libs/judge0.lib.js";
+import { submitBatch, pollBatchResults } from "../libs/judge0.lib.js";
 
 export const createProblem = async (req, res) => {
-  //get all the data from request body
   const {
     title,
     description,
@@ -15,22 +15,20 @@ export const createProblem = async (req, res) => {
     referenceSolution,
   } = req.body;
 
-  //check the role of the user once again(Admin or not?)
-
   if (req.user.role !== "ADMIN") {
-    res.status(403).json({
+    return res.status(403).json({
       error: "You are not allowed to create a problem",
     });
   }
 
-  //Loop through each reference solution for different languages
+  let newProblem; // 🔧 declare it here so it's available after the loop
 
   try {
     for (const [language, solutionCode] of Object.entries(referenceSolution)) {
-      const languageID = getJudge0LanguageId(language); //get the languageID
+      const languageID = getJudge0LanguageId(language);
       if (!languageID) {
         return res.status(400).json({
-          error: `Language ${language} is not supported`,
+          error: `Language ${language} is not supported`, // 🔧 fixed template string
         });
       }
 
@@ -42,25 +40,22 @@ export const createProblem = async (req, res) => {
       }));
 
       const submissionResult = await submitBatch(submissions);
+      const tokens = submissionResult.map((res) => res.token);
 
-      const tokens = submissionResult.map((res) => res.token); //{token:"db54881d-bcf5-4c7b-a2e3-d33fe7e25de7"}, we only want token so map is used
-
-      //getting the results
       const results = await pollBatchResults(tokens);
 
       for (let i = 0; i < results.length; i++) {
         const result = results[i];
-
-        if (result.status_id !== 3) {
+        if (result.status.id !== 3) {
           return res.status(400).json({
-            error: `error: Testcase-${i + 1} failed for language-${language}`,
+            error: `Testcase-${i + 1} failed for language-${language}`, // 🔧 fixed template string
           });
         }
       }
-
-      //save the problem to the database
-
-      const newProblem = await db.problem.create({
+    }
+    // ✅ save the problem after passing all tests
+    try {
+      newProblem = await db.problem.create({
         data: {
           title,
           description,
@@ -74,10 +69,22 @@ export const createProblem = async (req, res) => {
           userID: req.user.id,
         },
       });
-
-      return res.status(201).json(newProblem);
+      console.log(newProblem);
+    } catch (error) {
+      console.log("DB Error:", error);
+      return res.status(500).json({ error: "Failed to save problem to DB" });
     }
-  } catch (error) {}
+
+    // ✅ Send response using newProblem
+    return res.status(201).json({
+      success: true,
+      message: "Problem created successfully",
+      problem: newProblem,
+    });
+  } catch (error) {
+    console.error("Error creating problem:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 };
 
 export const getAllProblems = async (req, res) => {};

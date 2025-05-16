@@ -12,40 +12,62 @@ export const getJudge0LanguageId = (language) => {
 };
 
 export const submitBatch = async (submissions) => {
-  const { data } = await axios.post(
-    `${process.env.JUDGE0_API_URL}/submissions/batch?base64_encoded=false`,
-    {
-      submissions,
-    }
-  );
+  const options = {
+    method: "POST",
+    url: "https://judge0-ce.p.sulu.sh/submissions/batch",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      Authorization: "Bearer sk_live_FtxSbFRXjNXwnOMNVSLt5M6hHcgzd3oC",
+    },
+    data: {
+      submissions: submissions,
+    },
+  };
 
-  console.log("Submission Results:", data);
-  return data;
+  try {
+    const { data } = await axios.request(options);
+    console.log("Submission Results:", data);
+    return data;
+  } catch (error) {
+    console.error("Submission error:", error);
+    throw error; // Optionally rethrow the error
+  }
 };
-
 export const pollBatchResults = async (tokens) => {
+  const options = {
+    method: "GET",
+    url: "https://judge0-ce.p.sulu.sh/submissions/batch",
+    headers: {
+      Accept: "application/json",
+      Authorization: "Bearer sk_live_FtxSbFRXjNXwnOMNVSLt5M6hHcgzd3oC",
+    },
+    params: {
+      tokens: tokens.join(","),
+      base64_encoded: false,
+    },
+  };
+
   while (true) {
-    const { data } = await axios.get(
-      `${process.env.JUDGE0_API_URL}/submissions/batch`,
-      {
-        params: {
-          tokens: tokens.join(","),
-          base64_encoded: false,
-        },
+    try {
+      const { data } = await axios.request(options);
+      const results = data.submissions;
+      console.log(results.length);
+      console.log(results);
+
+      const isAllDone = results.every(
+        (r) => r.status.id !== 1 && r.status.id !== 2
+      );
+
+      if (isAllDone) {
+        return results;
       }
-    );
 
-    const results = data.submissions;
-
-    const isAllDone = results.every((r) => {
-      r.status_id !== 1 && r.status_id !== 2;
-    });
-
-    if (isAllDone) {
-      return results;
+      // Wait for 1 second
+      await sleep(1000);
+    } catch (error) {
+      console.error("Polling error:", error);
+      throw error; // Optionally rethrow if you want the caller to handle it
     }
-
-    //wait for 1 sec
-    await sleep(1000);
   }
 };
