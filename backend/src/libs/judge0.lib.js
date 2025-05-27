@@ -18,7 +18,7 @@ export const submitBatch = async (submissions) => {
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
-      Authorization: "Bearer sk_live_FtxSbFRXjNXwnOMNVSLt5M6hHcgzd3oC",
+      Authorization: `Bearer ${process.env.SULU_JUDGE_SECRET}`,
     },
     data: {
       submissions: submissions,
@@ -40,7 +40,7 @@ export const pollBatchResults = async (tokens) => {
     url: "https://judge0-ce.p.sulu.sh/submissions/batch",
     headers: {
       Accept: "application/json",
-      Authorization: "Bearer sk_live_FtxSbFRXjNXwnOMNVSLt5M6hHcgzd3oC",
+      Authorization: `Bearer ${process.env.SULU_JUDGE_SECRET}`,
     },
     params: {
       tokens: tokens.join(","),
