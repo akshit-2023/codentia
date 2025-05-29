@@ -7,7 +7,7 @@ import {
   getAllProblemsSolvedByUser,
   getProblemById,
   updateProblem,
-} from "../controllers/problem.container.js";
+} from "../controllers/problem.controller.js";
 
 const problemRoutes = express.Router();
 
