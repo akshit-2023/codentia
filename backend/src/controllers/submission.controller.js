@@ -48,7 +48,7 @@ export const getSubmissionsForProblem = async (req, res) => {
 export const getAllTheSubmissionsForProblem = async (req, res) => {
   try {
     const problemId = req.params.problemID;
-    const submissions = await db.submission.count({
+    const count = await db.submission.count({
       where: {
         problemID: problemId,
       },
@@ -56,7 +56,7 @@ export const getAllTheSubmissionsForProblem = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Submissions fetched successfully",
-      submissions,
+      count,
     });
   } catch (error) {
     console.error("Fetch submissions error:", error);
